@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Notifier</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .location-item { display: flex; justify-content: space-between; padding: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>Daily Weather Notifier</h1>
+    
+    <div>
+        <h2>Locations</h2>
+        <input type="text" id="locationInput" placeholder="Enter Zip or City, State">
+        <button onclick="addLocation()">Add Location</button>
+        <div id="locationsList"></div>
+    </div>
+
+    <div>
+        <h2>Notifications</h2>
+        <button id="subscribeBtn" onclick="subscribe()">Subscribe to Notifications</button>
+        <div id="subscriptionStatus"></div>
+        <div id="issueLinkContainer" style="display:none;">
+            <p>Click the link below to submit your subscription:</p>
+            <a id="issueLink" href="#" target="_blank">Create GitHub Issue</a>
+        </div>
+    </div>
+
+    <script>
+        const PUBLIC_VAPID_KEY = 'BL6wckEU0tTMU2vTYbEjoKrsXzqED1KtjHRm1ElCAAi2tfa4DxlPj5qHcfz5l-PL2AltDnM6XIl2nekCE1m3JEo';
+
+        // IndexedDB setup
+        const dbName = 'WeatherNotifierDB';
+        let db;
+        const request = indexedDB.open(dbName, 1);
+        request.onupgradeneeded = (event) => {
+            db = event.target.result;
+            db.createObjectStore('locations', { keyPath: 'id', autoIncrement: true });
+        };
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            displayLocations();
+        };
+
+        async function addLocation() {
+            const input = document.getElementById('locationInput').value;
+            if (!input) return;
+
+            // Geocoding via Open-Meteo
+            const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(input)}&count=1&language=en&format=json`);
+            const data = await response.json();
+            
+            if (data.results && data.results.length > 0) {
+                const result = data.results[0];
+                const location = {
+                    name: `${result.name}, ${result.admin1 || ''}, ${result.country}`,
+                    lat: result.latitude,
+                    lon: result.longitude
+                };
+                
+                const tx = db.transaction('locations', 'readwrite');
+                const store = tx.objectStore('locations');
+                store.add(location);
+                tx.oncomplete = () => {
+                    document.getElementById('locationInput').value = '';
+                    displayLocations();
+                };
+            } else {
+                alert('Location not found');
+            }
+        }
+
+        function displayLocations() {
+            const list = document.getElementById('locationsList');
+            list.innerHTML = '';
+            const tx = db.transaction('locations', 'readonly');
+            const store = tx.objectStore('locations');
+            const request = store.getAll();
+            request.onsuccess = () => {
+                request.result.forEach(loc => {
+                    const item = document.createElement('div');
+                    item.className = 'location-item';
+                    item.innerHTML = `<span>${loc.name} (${loc.lat.toFixed(2)}, ${loc.lon.toFixed(2)})</span>
+                                      <button onclick="deleteLocation(${loc.id})">Delete</button>`;
+                    list.appendChild(item);
+                });
+            };
+        }
+
+        function deleteLocation(id) {
+            const tx = db.transaction('locations', 'readwrite');
+            const store = tx.objectStore('locations');
+            store.delete(id);
+            tx.oncomplete = () => {
+                displayLocations();
+            };
+        }
+
+        async function subscribe() {
+            if ('serviceWorker' in navigator) {
+                const registration = await navigator.serviceWorker.ready;
+                try {
+                    const subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+                    });
+                    
+                    document.getElementById('subscriptionStatus').innerText = 'Subscribed!';
+                    generateIssueLink(subscription);
+                } catch (error) {
+                    console.error('Subscription failed:', error);
+                    document.getElementById('subscriptionStatus').innerText = 'Subscription failed.';
+                }
+            }
+        }
+
+        function generateIssueLink(subscription) {
+            const repoUrl = 'https://github.com/aawc/weather-notifier';
+            const title = encodeURIComponent('New Subscription');
+            const body = encodeURIComponent(JSON.stringify(subscription));
+            const url = `${repoUrl}/issues/new?title=${title}&body=${body}`;
+            
+            const link = document.getElementById('issueLink');
+            link.href = url;
+            document.getElementById('issueLinkContainer').style.display = 'block';
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/-/g, '+')
+                .replace(/_/g, '/');
+
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js');
+            });
+        }
+    </script>
+</body>
+</html>
