@@ -2,7 +2,7 @@ name: Daily Weather Notifier
 
 on:
   schedule:
-    - cron: '0 14 * * *' # 14:00 UTC (approx 7 AM LA time)
+    - cron: '0 * * * *' # Run hourly
   workflow_dispatch: # Allow manual trigger
 
 jobs:

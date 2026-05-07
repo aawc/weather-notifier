@@ -6,8 +6,9 @@ A standalone static website hosted on GitHub Pages that works as a PWA and sends
 
 1.  **Visit the site**: (Once deployed to GitHub Pages).
 2.  **Add Locations**: Enter your zip code or city/state and click "Add Location".
-3.  **Subscribe**: Click "Subscribe to Notifications".
-4.  **Submit Subscription**: Click the generated link "Create GitHub Issue" to submit your subscription data. Do not change the issue title or body.
+3.  **Set Preferences**: Choose the start time and interval for notifications.
+4.  **Subscribe**: Click "Subscribe to Notifications".
+5.  **Submit Subscription**: Click the generated link "Create GitHub Issue" to submit your subscription data. Do not change the issue title or body.
 
 ## Setup (For Repository Owner)
 
@@ -37,7 +38,7 @@ Add the following repository secrets:
 
 *   **Frontend**: Static HTML/JS hosted on GitHub Pages.
 *   **Database**: IndexedDB in the user's browser for locations. GitHub Issues for subscriptions.
-*   **Notifications**: GitHub Actions runs daily, reads subscriptions from open issues with title "New Subscription", and sends Web Push notifications.
+*   **Notifications**: GitHub Actions runs hourly, reads subscriptions from open issues with title "New Subscription", checks preferences, and sends Web Push notifications if due.
 *   **Weather Data**: Fetched from Open-Meteo by the Service Worker when a push notification is received.
 
 ## Security
