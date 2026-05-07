@@ -40,6 +40,10 @@ Add the following repository secrets:
 *   **Notifications**: GitHub Actions runs daily, reads subscriptions from open issues with title "New Subscription", and sends Web Push notifications.
 *   **Weather Data**: Fetched from Open-Meteo by the Service Worker when a push notification is received.
 
+## Security
+
+Please see [SECURITY.md](SECURITY.md) for details on how to report security vulnerabilities.
+
 ## Maintenance
 
-Keep this `README.md` and `PROMPT.md` up to date with any changes.
+Keep this `README.md`, `PROMPT.md`, and `SECURITY.md` up to date with any changes.
